@@ -17,6 +17,7 @@ class LabelPropagation:
         self.iters = iters
         self.normalize = normalize
         self.verbose = verbose
+
         
     def _precompute_nearest_neighbour_indices(self, X):
         """ get a lookup table of nearest neighbours for each datapoint
@@ -42,12 +43,14 @@ class LabelPropagation:
             nearest_indices = np.argpartition(dists, self._n_nearest_neighbours)[:(self._n_nearest_neighbours+1)]
             nearest_indices = np.array([j for j in nearest_indices if j!=i]) #cannot be own nearest neighbour
             self._neighbour_indices[i] = nearest_indices
+
             
     def _avg_nearby_labels(self, ytr, nearest_indices):
         nearest_labels = ytr[nearest_indices]
         nearest_labels = nearest_labels.sum(axis=0)
         nearest_labels /= nearest_labels.sum()
         return nearest_labels
+
     
     def _propagate_labels(self, ytr):
         if len(ytr.shape)!=2:
@@ -100,3 +103,16 @@ def plot_supervised_learner_performance(accs1, accs2, title, xlab, ylab, ticklab
     ax.legend((rects1[0], rects2[0]), (legend), loc='lower right')
 
     plt.show()
+
+
+def random_sample(dataset_size, n_train, n_test, random_seed=None):
+    """gets indices for non-overlapping training and test set samples"""
+    if (n_train + n_test) > dataset_size:
+        raise ValueError('dataset_size ({}) must be bigger than sum of n_train ({}) and n_test({})'.format(
+                dataset_size, n_train, n_test))
+    np.random.seed(random_seed)
+    np.random.permutation(5)
+    random_perm = np.random.permutation(range(dataset_size))
+    i_train = random_perm[:n_train]
+    i_test = random_perm[(-n_test):]
+    return (i_train, i_test)
