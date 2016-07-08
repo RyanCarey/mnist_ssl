@@ -16,3 +16,8 @@ train-labels-idx1-ubyte
 t10k-images-idx3-ubyte
 t10k-labels-idx1-ubyte
 
+# Report
+* The main demonstration of semisupervised learning algorithms is jup/Interactive\_report.ipynb
+* This calls on the script models/label\_propagation.py, which contains the LabelPropagation class as well as a couple of functions of general utility.
+* The other two notebooks show some scraps of code from other approaches that I have tried.
+

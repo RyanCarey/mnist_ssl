@@ -4,14 +4,49 @@ import matplotlib.pyplot as plt
 
 
 class LabelPropagation:
-    def __init__(self, n_nearest_neighbours, iters = 10, normalize=True, verbose = False):
         """
-        arguments:
-            n_nearest_neighbours: how many nearest-neighbour indices to find
-            iters: how many iterations the labels should be propagated for
-            normalize: correct for bandwagon effects among classes (bool). Is useful
-            if class frequences are roughly equally balanced.
+        LabelPropagation supervised learning algorithm. 
+
+        This class assigns labels from a labelled dataset to unlabelled data. It is designed to 
+        improve the performance of a classifier trainde on all of the labelled and unlabelled data.
+        
+        It implements a memory-efficient version of the label propagation algorithm described in:
+        Zhu, Xiaojin, and Zoubin Ghahramani. Learning from labeled and unlabeled data with label propagation. 
+        Technical Report CMU-CALD-02-107, Carnegie Mellon University, 2002.
+
+        In order to be memory-efficient, the change made is that instead of propagating labels using a 
+        gaussian kernel, labels are propagated to their nearest neighbours.
+
+        Parameters
+        ----------
+            n_nearest_neighbours: int, default: '5'
+                How many nearest-neighbour indices labels should be propagated from. 
+                This should be set higher if clustering behaviour is noisy or nonlocal.
+
+
+            iters: int, default: '10'
+                How many times the labels will be propagated to their neighbours. 
+                This controls how far labels can propagate through the graph, and can 
+                lead to overfitting or prediction of class imbalances if set to a high value.
+
+            normalize: bool, default: 'True'
+                Specifies whether the predicted probabilities of each class are normalized 
+                to make predicted classes more equal. 
+
+            verbose: bool, default: 'True'
+                Specifies whether progress in populating the matrix of neighbours is printed
+
+        Attributes
+        ----------
+            self._yunl_proba: ndarray, shape (num_unlabelled_examples, num_classes)
+                a one-hot encoded version of the encoded labels
+
+            self._neighbour_indices: ndarray, 
+                shape (num_labelled_examples + num_unlabelled examples, n_nearest_neighbours)
+                the indices of the k nearest neighbours of each example
         """
+
+    def __init__(self, n_nearest_neighbours=5, iters = 10, normalize=True, verbose = False):
         self._n_nearest_neighbours = n_nearest_neighbours
         self._neighbour_indices = None
         self.iters = iters
@@ -20,14 +55,12 @@ class LabelPropagation:
 
         
     def _precompute_nearest_neighbour_indices(self, X):
-        """ get a lookup table of nearest neighbours for each datapoint
+        """ 
+        Get a lookup table of nearest neighbours for each datapoint
 
         arguments:
         X: a dataset in which to find the nearest neighbours numpy array (n x m)
 
-        returns:
-        nearest_indices: the nearest k neighbours for each of the n datapoints, not 
-        necessarily given in order of proximity(n x k) 
         """
         
         self._neighbour_indices = np.zeros((X.shape[0],self._n_nearest_neighbours), dtype=int)
@@ -46,6 +79,17 @@ class LabelPropagation:
 
             
     def _avg_nearby_labels(self, ytr, nearest_indices):
+        """ 
+        Finds the average of soft labels of nearby examples. 
+
+        arguments: 
+            ytr: the full set of soft labels (ndarray; num_examples x num_labels)
+            nearest_indices: indexes for nearby elements (ndarray)
+
+        returns:
+            nearest_labels: an average of nearby labels (ndarray; num_labels,)
+        """
+
         nearest_labels = ytr[nearest_indices]
         nearest_labels = nearest_labels.sum(axis=0)
         nearest_labels /= nearest_labels.sum()
@@ -53,6 +97,13 @@ class LabelPropagation:
 
     
     def _propagate_labels(self, ytr):
+        """
+        Assigns the average of nearby labels to each unlabelled example.
+        Repeats this self.iters times.
+
+        arguments:
+            ytr: the full set of soft labels (ndarray; num_examples x num_labels)
+        """
         if len(ytr.shape)!=2:
             raise ValueError('ytr has shape {}, must be one-hot (2D)'.format(ytr.shape))
         
@@ -72,6 +123,23 @@ class LabelPropagation:
         return self.yunl
         
     def propagate(self, Xtr, ytr, Xunl):
+        """ 
+        Uses a set of labelled examples to assign soft labels to an unlabelled set.
+
+        arguments:
+            Xtr: the set of examples that have labels 
+                (ndarray; num_labelled_examples, num_features)
+            ytr: the set of labels 
+                (ndarray; num_labelled_examples, num_labels)
+            Xunl: the set of examples that lack labels
+                (ndarray; num_unlabelled_examples, num_features)
+
+        returns:
+            self.yunl: the set of soft labels for the unlabelled examples
+                (ndarray; num_unlabelled_examples, num_labels)
+
+        """
+
         self._precompute_nearest_neighbour_indices(np.vstack((Xtr, Xunl)))
         self._propagate_labels(ytr)
         return self.yunl
